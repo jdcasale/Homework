@@ -4,6 +4,9 @@
 #include <math.h>
 #include "image.h"
 
+// EXTRA CREDIT: scale_image IS IMPLEMENTED AT LINE 79
+// DOUBLE EXTRA CREDIT: not attempted
+
 float min(float a, float b) {
     if (a <= b) {
         return a;
