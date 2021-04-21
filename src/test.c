@@ -53,6 +53,13 @@ int within_eps(float a, float b, float eps){
     return a-eps<b && b<a+eps;
 }
 
+int within_eps2(float a, float b, float eps){
+    if (!(a-eps<b && b<a+eps)) {
+        printf("result: %f, expected: %f, %f: eps\n", a, b, eps);
+    }
+    return a-eps<b && b<a+eps;
+}
+
 int same_point(point p, point q, float eps)
 {
     return within_eps(p.x, q.x, eps) && within_eps(p.y, q.y, eps);
@@ -72,6 +79,8 @@ int same_matrix(matrix m, matrix n)
 
 int same_image(image a, image b, float eps)
 {
+    int same_px = 0;
+    int error_px = 0;
     int i;
     if(a.w != b.w || a.h != b.h || a.c != b.c) {
         //printf("Expected %d x %d x %d image, got %d x %d x %d\n", b.w, b.h, b.c, a.w, a.h, a.c);
@@ -82,11 +91,14 @@ int same_image(image a, image b, float eps)
         if (thresh > eps) eps = thresh;
         if(!within_eps(a.data[i], b.data[i], eps)) 
         {
-            printf("The value should be %f, but it is %f! \n", b.data[i], a.data[i]);
-            return 0;
+            ++error_px;
+//            printf("The value should be %f, but it is %f! same_px: %d, error_px: %d \n", b.data[i], a.data[i], same_px, error_px);
+//            return 0;
         }
     }
-    return 1;
+
+    return error_px == 0;
+//    return 1;
 }
 
 void test_get_pixel(){

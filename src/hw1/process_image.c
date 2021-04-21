@@ -23,6 +23,9 @@ float max(float a, float b) {
 
 float get_pixel(image im, int x, int y, int c)
 {
+//    assert (x <= im.w);
+//    assert (y <= im.h);
+//    assert (c <= im.c);
     int clamped_x = max(min(x, im.w-1), 0);
     int clamped_y = max(min(y, im.h-1), 0);
     int clamped_c = max(min(c, 2), 0);
