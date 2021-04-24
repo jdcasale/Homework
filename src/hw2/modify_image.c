@@ -3,9 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
-#include <pthread.h>
 #include "image.h"
-#define TWOPI 6.2831853
 
 /******************************** Resizing *****************************
   To resize we'll need some interpolation methods and a function to create
@@ -112,8 +110,8 @@ image bilinear_resize(image im, int w, int h)
 
     float scale_factor_w = ((float)im.w) / ((float)w);
     float scale_factor_h = ((float)im.h) / ((float)h);
-    printf("scale_factor_w: %f, scale_factor_h: %f\n", scale_factor_w, scale_factor_h);
-    printf("h %d, w: %d, new_h: %d, new_w: %d\n", im.h, im.w, h, w);
+//    printf("scale_factor_w: %f, scale_factor_h: %f\n", scale_factor_w, scale_factor_h);
+//    printf("h %d, w: %d, new_h: %d, new_w: %d\n", im.h, im.w, h, w);
 
     for (int i = 0; i < h; ++i) {
         for (int j = 0; j < w; ++j) {
@@ -155,7 +153,6 @@ void l1_normalize(image im)
 
 image make_box_filter(int w)
 {
-    // TODO
     /***********************************************************************
       This function makes a square filter of size "w x w". Make an image of
       width = height = w and number of channels = 1, with all entries equal
@@ -191,7 +188,6 @@ float convolve_internal(
 
 image sum_channels(image im)
 {
-    printf("aaaaaaaaaaaaaaaaaaaaa");
     int channel_size = im.w * im.h;
     image summed = make_image(im.w, im.h, 1);
     for(int i = 0; i < channel_size; ++i) {
@@ -206,13 +202,6 @@ image sum_channels(image im)
 
 image convolve_image(image im, image filter, int preserve)
 {
-//    pthread_t tid;
-//    int num_threads = 10;
-//    for (int i = 0; i < num_threads; ++i) {
-//        pthread_create(&tid, NULL, myThreadFun, (void *)&tid);
-//    }
-//
-
     assert(im.c == filter.c || filter.c == 1);
     /***********************************************************************
       This function convolves the image "im" with the "filter". The value
@@ -225,11 +214,6 @@ image convolve_image(image im, image filter, int preserve)
         for (int cx = 0; cx < im.c; ++cx) {
             for (int i = 0; i < im.h; ++i) {
                 for (int j = 0; j < im.w; ++j) {
-//                    int t = (cx* im.h * im.w) + (i * im.w) + j;
-//                    float s = (float)(im.w *im.h* im.c);
-//                    if (t % 10000 == 0) {
-//                        printf("t: %d, s: %f, pct_done: %f\n\n", t,s, t/s);
-//                    }
                     set_pixel(convolved, j, i, cx, convolve_internal(im, filter, kernel_width, i, j, cx, cx));
                 }
             }
@@ -238,11 +222,6 @@ image convolve_image(image im, image filter, int preserve)
         for (int cx = 0; cx < im.c; ++cx) {
             for (int i = 0; i < im.h; ++i) {
                 for (int j = 0; j < im.w; ++j) {
-//                    int t = (cx* im.h * im.w) + (i * im.w) + j;
-//                    float s = (float)(im.w *im.h* im.c);
-//                    if (t % 100000 == 0) {
-//                        printf("t: %d, s: %f, pct_done: %f\n\n", t,s, t/s);
-//                    }
                     set_pixel(convolved, j, i, cx, convolve_internal(im, filter, kernel_width, i, j, cx, 0));
                 }
             }
@@ -250,7 +229,6 @@ image convolve_image(image im, image filter, int preserve)
     } else {
         assert(0);
     }
-    printf("bbbbbbbbbbbbbbbbbbbbbbb\n");
     if (preserve) {
         return convolved;
     } else {
@@ -329,30 +307,30 @@ image make_gaussian_filter(float sigma)
       Create a Gaussian filter with the given sigma. Note that the kernel size 
       is the next highest odd integer from 6 x sigma. Return the Gaussian filter.
     ************************************************************************/
-
-    int kernal_size = 6 * sigma + 1;
+    int kernal_size_f = (6.0f * sigma);
+    int kernal_size = (int)(6.0f * sigma);
+//    if ()
+    if (kernal_size % 2 == 0) {
+        kernal_size++;
+    }
     int start = - kernal_size/2;
     int end = kernal_size/2;
     image filter = make_image(kernal_size,kernal_size,1);
-    float r, s = 2.0f * sigma * sigma;
 
-    // sum is for normalization
-    float sum = 0.0f;
-
+    float denominator = sigma * sigma * 2.0f;
     for (int x = start; x <= end; x++) {
         for (int y = start; y <= end; y++) {
-            r = sqrt(x * x + y * y);
-            set_pixel(filter, x + end, y + end, 0, (exp(-(r * r) / s)) / (M_PI * s));
-            sum += get_pixel(filter, x + end, y + end, 0);
+//            float x2 = (((float)kernal_size) / 2.0f) - (x + 0.5f);
+//            float y2 = (((float)kernal_size) / 2.0f) - (y + 0.5f);
+//            printf("kernel_size %d, x %d, y %d, x2 %f , y2 %f\n\n", kernal_size, x, y, x2, y2);
+            float x2 = (float)x;
+            float y2 = (float)y;
+            float val = (expf(-(x2*x2 + y2*y2) / denominator)) / (denominator * M_PI);
+            set_pixel(filter, x + end, y + end, 0, val);
         }
     }
 
-    // normalising the Kernel
-    for (int i = 0; i < kernal_size; ++i)
-        for (int j = 0; j < kernal_size; ++j) {
-            float v = get_pixel(filter, i, j, 0) / sum;
-            set_pixel(filter, i, j, 0, v);
-        }
+    l1_normalize(filter);
     return filter;
 }
 
@@ -403,16 +381,20 @@ image make_gx_filter()
     ************************************************************************/
     image filter = make_image(3,3,1);
     set_pixel(filter, 0, 0, 0, -1);
-    set_pixel(filter, 2, 0, 0, 1);
-    set_pixel(filter, 0, 2, 0, -1);
-    set_pixel(filter, 2, 2, 0, 1);
 
-    set_pixel(filter, 1, 0, 0, -1);
+    set_pixel(filter, 1, 0, 0, 0);
+    set_pixel(filter, 2, 0, 0, 1);
+
     set_pixel(filter, 0, 1, 0, -2);
-    set_pixel(filter, 2, 1, 0, 2);
-    set_pixel(filter, 1, 2, 0, 1);
+    set_pixel(filter, 0, 2, 0, -1);
 
     set_pixel(filter, 1, 1, 0, 0);
+    set_pixel(filter, 1, 2, 0, 0);
+
+    set_pixel(filter, 2, 1, 0, 2);
+    set_pixel(filter, 2, 2, 0, 1);
+
+    return filter;
 }
 
 image make_gy_filter()
@@ -423,16 +405,20 @@ image make_gy_filter()
     ************************************************************************/
     image filter = make_image(3,3,1);
     set_pixel(filter, 0, 0, 0, -1);
-    set_pixel(filter, 2, 0, 0, -1);
-    set_pixel(filter, 0, 2, 0, 1);
-    set_pixel(filter, 2, 2, 0, 1);
 
     set_pixel(filter, 1, 0, 0, -2);
+    set_pixel(filter, 2, 0, 0, -1);
+
     set_pixel(filter, 0, 1, 0, 0);
-    set_pixel(filter, 2, 1, 0, 0);
-    set_pixel(filter, 1, 2, 0, 2);
+    set_pixel(filter, 0, 2, 0, 1);
 
     set_pixel(filter, 1, 1, 0, 0);
+    set_pixel(filter, 2, 2, 0, 1);
+
+    set_pixel(filter, 1, 2, 0, 2);
+    set_pixel(filter, 2, 1, 0, 0);
+
+    return filter;
 }
 
 void feature_normalize(image im)
@@ -442,8 +428,9 @@ void feature_normalize(image im)
       Calculate minimum and maximum pixel values. Normalize the image by
       subtracting the minimum and dividing by the max-min difference.
     ************************************************************************/
-    float max = 0.0f;
-    float min = 500.0f;
+    float max = -5000.0f;
+    float min = 5000.0f;
+
     for (int i = 0; i < im.h * im.w * im.c; ++i) {
         if (im.data[i] < min) {
             min = im.data[i];
@@ -459,6 +446,7 @@ void feature_normalize(image im)
             im.data[i] /= range;
         }
     }
+    printf("feature_normalize -- im.c: %d ", im.c);
 }
 
 image *sobel_image(image im)
@@ -470,21 +458,21 @@ image *sobel_image(image im)
     ************************************************************************/
     image gx_filter = make_gx_filter();
     image gy_filter = make_gy_filter();
-    printf("00\n\n\n");
     image gx = convolve_image(im, gx_filter, 0);
-    printf("01\n\n\n");
     image gy = convolve_image(im, gy_filter, 0);
-    printf("02\n\n\n");
-    image magnitude = make_image(im.w, im.h, im.c);
-    image direction = make_image(im.w, im.h, im.c);
-    for (int i = 0; i < im.h * im.w * im.c; ++i) {
-        magnitude.data[i] = sqrt(gy.data[i]*gy.data[i] + gx.data[i]*gx.data[i]);
-        direction.data[i] = atan(gy.data[i] / gx.data[i]);
+    image magnitude = make_image(im.w, im.h, 1);
+    image direction = make_image(im.w, im.h, 1);
+//    feature_normalize(gx);
+//    feature_normalize(gy);
+    for (int i = 0; i < im.h * im.w; ++i) {
+        magnitude.data[i] = sqrtf(gy.data[i]*gy.data[i] + gx.data[i]*gx.data[i]);
+        direction.data[i] = atanf(gy.data[i] / gx.data[i]);
     }
 
     image *sobelimg = calloc(2, sizeof(image));
-    sobelimg[0] = magnitude;
-    sobelimg[1] = direction;
+    sobelimg[1] = magnitude;
+//    feature_normalize(direction);
+    sobelimg[0] = direction;
     free_image(gx);
     free_image(gy);
 

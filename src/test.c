@@ -425,19 +425,16 @@ void test_sobel(){
     image *res = sobel_image(im);
     image mag = res[0];
     image theta = res[1];
-    printf("-1\n\n\n");
+    printf("mag.c %d, theta.c %d, im.c %d\n", mag.c, theta.c, im.c);
     feature_normalize(mag);
-    printf("0\n\n\n");
     feature_normalize(theta);
-
-    printf("1\n\n\n");
+    printf("222mag.c %d, theta.c %d, im.c %d\n", mag.c, theta.c, im.c);
     image gt_mag = load_image("figs/magnitude.png");
     image gt_theta = load_image("figs/theta.png");
-    printf("2\n\n\n");
+    printf("333mag.c %d, theta.c %d, im.c %d\n", gt_mag.c, gt_theta.c, im.c);
+
     TEST(gt_mag.w == mag.w && gt_theta.w == theta.w);
-    printf("3\n\n\n");
     TEST(gt_mag.h == mag.h && gt_theta.h == theta.h);
-    printf("4\n\n\n");
     TEST(gt_mag.c == mag.c && gt_theta.c == theta.c);
     if( gt_mag.w != mag.w || gt_theta.w != theta.w || 
         gt_mag.h != mag.h || gt_theta.h != theta.h || 
@@ -466,20 +463,25 @@ void test_sobel(){
 
 void test_hw2()
 {
-    test_nn_interpolate();
+//    test_nn_interpolate();
+
 //    test_nn_resize();
-    test_bl_interpolate();
+
+//    test_bl_interpolate();
+//
 //    test_bl_resize();
 //    test_multiple_resize();
+
+
     test_gaussian_filter();
-    test_sharpen_filter();
-    test_emboss_filter();
-    test_highpass_filter();
-    test_convolution();
-    test_gaussian_blur();
-    test_hybrid_image();
-    test_frequency_image();
-    test_sobel();
+//    test_sharpen_filter();
+//    test_emboss_filter();
+//    test_highpass_filter();
+//    test_convolution();
+//    test_gaussian_blur();
+//    test_hybrid_image();
+//    test_frequency_image();
+//    test_sobel();
     printf("%d tests, %d passed, %d failed\n", tests_total, tests_total-tests_fail, tests_fail);
 }
 
