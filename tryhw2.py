@@ -42,3 +42,21 @@ res = sobel_image(im)
 mag = res[0]
 feature_normalize(mag)
 save_image(mag, "magnitude")
+
+im = load_image("data/dog.jpg")
+colorized = colorize_sobel(im)
+feature_normalize(colorized)
+save_image(colorized, "colorized_sobel")
+
+
+# try out median filtering on the example from the prompt
+im = load_image("figs/salt_petter_building.jpg")
+res = apply_median_filter(im, 7)
+land = res
+save_image(land, "landscape")
+
+# median filtering ont the requested picture
+im = load_image("data/landscape.jpg")
+res = apply_median_filter(im, 7)
+land = res
+save_image(land, "landscape")

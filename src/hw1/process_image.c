@@ -148,7 +148,7 @@ void hsv_to_rgb(image im)
         float v_val = im.data[idx3];
 
         float h_prime = h_val*6.0f;
-        float hi = fmod(floor(h_prime), 6.0f);
+        float hi = fabsf(fmodf(floorf(h_prime), 6.0f));
         float f_val = h_prime - hi;
         int hi_int = (int) hi;
 
