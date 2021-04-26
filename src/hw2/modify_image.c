@@ -5,7 +5,7 @@
 #include <assert.h>
 #include "image.h"
 
-// EXTRA CREDIT: apply_median_filter implemented at line
+// EXTRA CREDIT: apply_median_filter implemented at line 524
 // DOUBLE EXTRA CREDIT: not attempted
 
 /******************************** Resizing *****************************
