@@ -39,13 +39,6 @@ int within_eps(float a, float b, float eps){
     return a-eps<b && b<a+eps;
 }
 
-int within_eps2(float a, float b, float eps){
-    if (!(a-eps<b && b<a+eps)) {
-        printf("result: %f, expected: %f, %f: eps\n", a, b, eps);
-    }
-    return a-eps<b && b<a+eps;
-}
-
 int same_point(point p, point q, float eps)
 {
     return within_eps(p.x, q.x, eps) && within_eps(p.y, q.y, eps);
@@ -65,8 +58,6 @@ int same_matrix(matrix m, matrix n)
 
 int same_image(image a, image b, float eps)
 {
-    int same_px = 0;
-    int error_px = 0;
     int i;
     if(a.w != b.w || a.h != b.h || a.c != b.c) {
         //printf("Expected %d x %d x %d image, got %d x %d x %d\n", b.w, b.h, b.c, a.w, a.h, a.c);
@@ -77,17 +68,11 @@ int same_image(image a, image b, float eps)
         if (thresh > eps) eps = thresh;
         if(!within_eps(a.data[i], b.data[i], eps))
         {
-            ++error_px;
-//            printf("The value at index i: %d should be %f, but it is %f! same_px: %d, error_px: %d \n", i, b.data[i], a.data[i], same_px, error_px);
-//            return 0;
-        }
-        else {
-            ++same_px;
+            printf("The value should be %f, but it is %f! \n", b.data[i], a.data[i]);
+            return 0;
         }
     }
-    printf("same_px: %d error_px: %d \n", same_px, error_px);
-    return error_px == 0;
-//    return 1;
+    return 1;
 }
 
 void test_get_pixel(){
@@ -425,14 +410,11 @@ void test_sobel(){
     image *res = sobel_image(im);
     image mag = res[0];
     image theta = res[1];
-    printf("mag.c %d, theta.c %d, im.c %d\n", mag.c, theta.c, im.c);
     feature_normalize(mag);
     feature_normalize(theta);
-    printf("222mag.c %d, theta.c %d, im.c %d\n", mag.c, theta.c, im.c);
+
     image gt_mag = load_image("figs/magnitude.png");
     image gt_theta = load_image("figs/theta.png");
-    printf("333mag.c %d, theta.c %d, im.c %d\n", gt_mag.c, gt_theta.c, im.c);
-
     TEST(gt_mag.w == mag.w && gt_theta.w == theta.w);
     TEST(gt_mag.h == mag.h && gt_theta.h == theta.h);
     TEST(gt_mag.c == mag.c && gt_theta.c == theta.c);

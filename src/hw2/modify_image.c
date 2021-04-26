@@ -281,20 +281,31 @@ image make_emboss_filter() {
 // We DON'T need preserve if the information we're trying to capture can be represented by a single, scalar value for each pixel.
 // Things like the gradient and magnitude calculations produced by the Sobel operator fall into this image.
 // Examples:
-// Highpass, if we only care about flagging pixels where _any_ channel passes the filter
-// GX and GY filters within Sobel operator -- these calculate a scalar value based on all three channels, so it probably
+// - Highpass, if we only care about flagging pixels where _any_ channel passes the filter
+// - GX and GY filters within Sobel operator -- these calculate a scalar value based on all three channels, so it probably
 // does not make sense to calculate this for each channel separately.
 
-// We DO need preserve if the information we're trying to capture information about each channel, or if we're trying to
-// make stylistic modifications to an image that produce a viewable image as a result.
+// We DO need preserve if the information we're trying to capture information about each channel individually, or if
+// we're trying to make stylistic modifications to an image and produce a viewable image as a result.
 // Examples:
-// Box filter
-// Sharpen
-// Emboss
-// Gaussian blur
+// - Box filter
+// - Sharpen
+// - Emboss
+// - Gaussian blur
 
 // Question 2.3.2: Do we have to do any post-processing for the above filters? Which ones and why?
-// Answer: TODO
+// Answer:
+// Yes, we need to do some postprocessing for Highpass, Sharpen and Emboss filters. When convolved with an image,
+// all three of the filters can result in pixel multipliers greater than 1, which means they can create results outside
+// of the range of valid pixel values. In the assignment, we handle this by applying our clamp_pixel() function, which
+// clamps all of these above-or-below-range pixel values to either MAX or MIN, depending on which way they overflow.
+// Because the box filter is simply averaging together pixel values (each of which is within the valid range) it cannot
+// produce an invalid overflow in the same way -- thus we need no postprocessing for the Box filter.
+//
+// We can verify this -- each of the tests for these filters applies clamp_pixel() to the result before making comparisons.
+// If we comment out that line on any of the Highpass, Sharpen, or Emboss tests, the test fails, showing a pixel value
+// that overflows out of the valid range.
+// If we comment out the clamp_pixel() call in the test for the box filter (test_convolution()), the test still passes.
 
 image make_gaussian_filter(float sigma) {
     /***********************************************************************
@@ -319,14 +330,10 @@ image make_gaussian_filter(float sigma) {
     int end = kernel_size / 2;
     image filter = make_image(kernel_size, kernel_size, 1);
 
-    // note: I thought that adding/subtracting 0.5 increments was a bit inelegant and error-prone
-    // so I came up with a slightly different approach that is mathematically
-    // equivalent. It gives correct results according to the test, at least.
-    // As the distance between the center of the pixel and the relevant axis of the
-    // kernel is the operative metric, we can directly use that value instead of trying to
-    // do a coordinate shift and then subtract coordinates, because we already know
-    // the results.
     float denominator = sigma * sigma * 2.0f;
+
+    // instead of adding/subtracting 0.5 and calculating distange to the center axis of the kernel, in effect adding
+    // a mu term to the gaussian, shift the window to the left so that mu = 0 and we don't need to do extra math
     for (int x = start; x <= end; x++) {
         for (int y = start; y <= end; y++) {
             float x2 = (float) x;
