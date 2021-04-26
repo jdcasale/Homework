@@ -5,6 +5,9 @@
 #include <assert.h>
 #include "image.h"
 
+// EXTRA CREDIT: apply_median_filter implemented at line
+// DOUBLE EXTRA CREDIT: not attempted
+
 /******************************** Resizing *****************************
   To resize we'll need some interpolation methods and a function to create
   a new image and fill it in with our interpolation methods.
@@ -516,36 +519,31 @@ int cmpfunc(const void *a, const void *b) {
 
 /**
  * This is an implementation of the algorithm described on Wikipedia
- * It has an issue where it shifts the resulting image slightly down and to the right, but
- * this is exactly what is described on wikipedia with the exception of clamping pixels around the border.
- * Even if I remove the clamping modification and implement _exactly_ the algorithm described on wikipedia,
- * the problem persists.
  */
 
 image apply_median_filter(image im, int kernel_size) {
-    // kernel size must be oan odd, positive number
-    assert(kernel_size % 2);
+    // kernel size must be an odd, positive number
+    assert(kernel_size % 2 && kernel_size > 0);
 
     image kernel = make_image(kernel_size, kernel_size, 1);
     image output = make_image(im.w, im.h, im.c);
 
     int edge = kernel_size / 2;
 
-    // this window will grab pixels from outside the image,
-    // but we rely on clamping to give a full kernel anyway
+    // this window will grab pixels from outside the image, but we rely on clamping
+    // (returning the value of the pixel at the edge) to give a full kernel anyway
     for (int ci = 0; ci < im.c; ++ci) {
         for (int x = 0; x < im.w; ++x) {
             for (int y = 0; y < im.h; ++y) {
                 int counter = 0;
-                for (int fx = 0; fx < edge; ++fx) {
-                    for (int fy = 0; fy < edge; ++fy) {
-                        kernel.data[counter] = get_pixel(im, x + fx - edge/*- (sqrtf(2.0f*edge*edge)/2.0f)*/,
-                                                         y + fy - edge/*- (sqrtf(2.0f*edge*edge)/2.0f)*/, ci);
+                for (int fx = 0; fx < kernel_size; ++fx) {
+                    for (int fy = 0; fy < kernel_size; ++fy) {
+                        kernel.data[counter] = get_pixel(im, x + fx - 1*edge,y + fy - 1*edge, ci);
                         ++counter;
                     }
                 }
-                qsort(kernel.data, edge * edge, sizeof(float), cmpfunc);
-                set_pixel(output, x, y, ci, kernel.data[edge * edge / 2]);
+                qsort(kernel.data, kernel_size * kernel_size, sizeof(float), cmpfunc);
+                set_pixel(output, x, y, ci, kernel.data[kernel_size * kernel_size / 2]);
             }
         }
     }
@@ -555,8 +553,7 @@ image apply_median_filter(image im, int kernel_size) {
 
 // SUPER EXTRA CREDIT: Bilateral filter
 
-image apply_bilateral_filter(image im, float sigma1, float sigma2)
-{
-    float kernel_size = 6 * sigma1;
-    return make_image(1,1,1);
-}
+//image apply_bilateral_filter(image im, float sigma1, float sigma2)
+//{
+//    return make_image(1,1,1);
+//}

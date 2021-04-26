@@ -445,20 +445,20 @@ void test_sobel(){
 
 void test_hw2()
 {
-    test_nn_interpolate();
-    test_nn_resize();
-    test_bl_interpolate();
-    test_bl_resize();
-    test_multiple_resize();
-    test_gaussian_filter();
-    test_sharpen_filter();
-    test_emboss_filter();
-    test_highpass_filter();
-    test_convolution();
-    test_gaussian_blur();
-    test_hybrid_image();
-    test_frequency_image();
-    test_sobel();
+//    test_nn_interpolate();
+//    test_nn_resize();
+//    test_bl_interpolate();
+//    test_bl_resize();
+//    test_multiple_resize();
+//    test_gaussian_filter();
+//    test_sharpen_filter();
+//    test_emboss_filter();
+//    test_highpass_filter();
+//    test_convolution();
+//    test_gaussian_blur();
+//    test_hybrid_image();
+//    test_frequency_image();
+//    test_sobel();
     printf("%d tests, %d passed, %d failed\n", tests_total, tests_total-tests_fail, tests_fail);
 }
 

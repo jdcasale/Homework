@@ -51,9 +51,9 @@ save_image(colorized, "colorized_sobel")
 
 # try out median filtering on the example from the prompt
 im = load_image("figs/salt_petter_building.jpg")
-res = apply_median_filter(im, 7)
+res = apply_median_filter(im, 3)
 land = res
-save_image(land, "salt_petter_building")
+save_image(land, "salt_petter_building_median_filter")
 
 # median filtering ont the requested picture
 im = load_image("data/landscape.jpg")
