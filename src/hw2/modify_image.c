@@ -24,7 +24,6 @@ float nn_interpolate(image im, float x, float y, int c) {
 }
 
 image nn_resize(image im, int w, int h) {
-    // TODO Fill in (also fix the return line)
     /***********************************************************************
       This function uses nearest-neighbor interpolation on image "im" to a new
       image of size "w x h"
@@ -52,7 +51,6 @@ image nn_resize(image im, int w, int h) {
 }
 
 float bilinear_interpolate(image im, float x, float y, int c) {
-    // TODO
     /***********************************************************************
       This function performs bilinear interpolation on image "im" given
       a floating column value "x", row value "y" and integer channel "c".
@@ -83,7 +81,6 @@ float bilinear_interpolate(image im, float x, float y, int c) {
 }
 
 image bilinear_resize(image im, int w, int h) {
-    // TODO
     /***********************************************************************
       This function uses bilinear interpolation on image "im" to a_w new image
       of size "w x h". Algorithm is same as nearest-neighbor interpolation.
@@ -116,7 +113,6 @@ image bilinear_resize(image im, int w, int h) {
 ************************************************************************/
 
 void l1_normalize(image im) {
-    // TODO
     /***********************************************************************
       This function divides each value in image "im" by the sum of all the
       values in the image and modifies the image in place.
