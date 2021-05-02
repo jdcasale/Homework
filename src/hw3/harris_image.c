@@ -172,8 +172,11 @@ image structure_matrix(image im, float sigma)
     image gx_filter = make_gx_filter();
     image gy_filter = make_gy_filter();
     image gauss = make_gaussian_filter(sigma);
+    image gauss2 = make_gaussian_filter(sigma);
+    image gauss3 = make_gaussian_filter(sigma);
 
     image ix = convolve_image(im, gx_filter, 0);
+
     image iy = convolve_image(im, gy_filter, 0);
     image ix_iy = multiply_images_elementwise(ix, iy);
 
@@ -181,11 +184,9 @@ image structure_matrix(image im, float sigma)
     image ix_weighted = convolve_image(ix, gauss, 0);
 
     square_image_values(iy);
-    image iy_weighted = convolve_image(iy, gauss, 0);
-    image ix_iy_weighted = convolve_image(ix_iy, gauss, 0);
+    image iy_weighted = convolve_image(iy, gauss2, 0);
+    image ix_iy_weighted = convolve_image(ix_iy, gauss3, 0);
 
-    assert(ix_weighted.c == 1);
-    assert(iy_weighted.c == 1);
     int c = 0;
     for(int x = 0; x < im.w; ++x) {
         for(int y = 0; y < im.h; ++y) {
@@ -204,17 +205,18 @@ image structure_matrix(image im, float sigma)
             set_pixel(S, x, y, c, get_pixel(ix_iy_weighted, x, y, 0));
         }
     }
-
+    free_image(gx_filter);
+    free_image(gy_filter);
+    free_image(ix);
+    free_image(iy);
+    free_image(ix_weighted);
+    free_image(iy_weighted);
+    free_image(ix_iy);
+    free_image(ix_iy_weighted);
+    free_image(gauss);
+    free_image(gauss2);
+    free_image(gauss3);
     return S;
-}
-
-float trace(image im) {
-    assert (im.w == im.h);
-    float f = 0;
-    for (int i = 0; i < im.w; ++i) {
-        f+=get_pixel(im, i,i,0);
-    }
-    return f;
 }
 
 // Estimate the cornerness of each pixel given a structure matrix S.
@@ -225,31 +227,17 @@ image cornerness_response(image S)
     image R = make_image(S.w, S.h, 1);
     // TODO: fill in R, "cornerness" for each pixel using the structure matrix.
     // We'll use formulation det(S) - alpha * trace(S)^2, alpha = .06.
-//    float alpha = 0.06f;
-//    for (int i = 0; i < S.h; ++i) {
-//        for (int j = 0; j < S.w; ++j) {
-//            float ad = get_pixel(S, i, j, 0) * get_pixel(S, i, j, 1);
-//            float bc = powf(get_pixel(S, i, j, 3), 2);
-//            float trace = ad;
-//            set_pixel(R, i, j, 0, (ad - bc) * alpha - alpha * trace * trace);
-//        }
-//    }
-    return R;
-}
-
-float determinant_internal(image im, int i, int j) {
-    float det = 0;
-    if (i == 0) {
-
-    } else {
-        float polarity = 1;
-        for (int x = 0; x < im.w; ++x) {
-            if (x !=j) {
-                det += polarity * get_pixel(im, i, x, 0) * determinant_internal(im, i - 1, j);
-                polarity *=-1;
-            }
+    float alpha = 0.06f;
+    for (int y = 0; y < S.h; ++y) {
+        for (int x = 0; x < S.w; ++x) {
+            float ad = get_pixel(S, x, y, 0) * get_pixel(S, x, y, 1);
+            float bc = get_pixel(S, x, y, 3) * get_pixel(S, x, y, 3);
+            float trace = get_pixel(S, x, y, 0) + get_pixel(S, x, y, 1);;
+            float val = (ad - bc) - alpha * trace * trace;
+            set_pixel(R, x, y, 0, val);
         }
     }
+    return R;
 }
 
 // Perform non-max supression on an image of feature responses.

@@ -6,6 +6,12 @@ def structure():
     feature_normalize(struct)
     save_png(struct, "output/structure")
 
+def response():
+    im = load_image("data/dogbw.png")
+    struct = cornerness_response(im)
+    feature_normalize(struct)
+    save_png(struct, "output/response")
+
 def draw_corners():
     im = load_image("data/Rainier1.png")
     detect_and_draw_corners(im, 2, 50, 3)
@@ -74,7 +80,8 @@ def field_panorama():
     save_image(pan5, "output/field_panorama_5")
 
 os.makedirs('output', exist_ok=True)
-structure()
+# structure()
+response()
 # draw_corners()
 # draw_matches()
 # easy_panorama()
