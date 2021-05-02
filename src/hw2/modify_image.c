@@ -431,23 +431,33 @@ void feature_normalize(image im) {
       Calculate minimum and maximum pixel values. Normalize the image by
       subtracting the minimum and dividing by the max-min difference.
     ************************************************************************/
-    float max = -5000.0f;
-    float min = 5000.0f;
-
-    for (int i = 0; i < im.h * im.w * im.c; ++i) {
-        if (im.data[i] < min) {
-            min = im.data[i];
-        }
-        if (im.data[i] > max) {
-            max = im.data[i];
-        }
+//    float max = -5000.0f;
+//    float min = 5000.0f;
+//
+//    for (int i = 0; i < im.h * im.w * im.c; ++i) {
+//        if (im.data[i] < min) {
+//            min = im.data[i];
+//        }
+//        if (im.data[i] > max) {
+//            max = im.data[i];
+//        }
+//    }
+//    float range = max - min;
+//    for (int i = 0; i < im.h * im.w * im.c; ++i) {
+//        im.data[i] -= min;
+//        if (range) {
+//            im.data[i] /= range;
+//        }
+//    }
+    int i;
+    float min = im.data[0];
+    float max = im.data[0];
+    for(i = 0; i < im.w*im.h*im.c; ++i){
+        if(im.data[i] > max) max = im.data[i];
+        if(im.data[i] < min) min = im.data[i];
     }
-    float range = max - min;
-    for (int i = 0; i < im.h * im.w * im.c; ++i) {
-        im.data[i] -= min;
-        if (range) {
-            im.data[i] /= range;
-        }
+    for(i = 0; i < im.w*im.h*im.c; ++i){
+        im.data[i] = (im.data[i] - min)/(max-min);
     }
 }
 

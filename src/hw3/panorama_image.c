@@ -117,7 +117,11 @@ image find_and_draw_matches(image a, image b, float sigma, float thresh, int nms
 // returns: l1 distance between arrays (sum of absolute differences).
 float l1_distance(float *a, float *b, int n)
 {
-    // TODO: return the correct number.
+    float sum = 0.0f;
+    for (int i = 0; i < n; ++i) {
+        sum+=a[i];
+        sum+=b[i];
+    }
     return 0;
 }
 

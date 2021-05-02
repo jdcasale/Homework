@@ -83,8 +83,38 @@ void mark_corners(image im, descriptor *d, int n)
 // returns: single row image of the filter.
 image make_1d_gaussian(float sigma)
 {
-    // TODO: make separable 1d Gaussian.
-    return make_image(1,1,1);
+    float edge_len = (6.0f * sigma);
+    int edge_len_int = (int) (edge_len);
+    // paranoid about rounding errors
+    if (fabsf(roundf(edge_len) - edge_len) > 0.00001) {
+        ++edge_len_int;
+    }
+    if (edge_len_int % 2 == 0) {
+        ++edge_len_int;
+    }
+
+    image filter = make_image(edge_len_int,1,1);
+
+    int half_edge = edge_len_int/2;
+    float two_sigma_squared = sigma * sigma * 2.0f;
+
+    for (int i = -1 * half_edge; i < half_edge; ++i) {
+        float val = 1.0f/sqrtf(two_sigma_squared * M_PI)* expf(-powf((float)i, 2)/two_sigma_squared);
+        set_pixel(filter, i, 0, 0, val);
+    }
+    return filter;
+}
+
+image reflect_img(image im) {
+    image reflected = make_image(im.h, im.w, im.c);
+    for (int x = 0; x < im.w; ++x) {
+        for (int y = 0; y < im.h; ++y) {
+            for (int c = 0; c < im.c; ++c) {
+                set_pixel(reflected, y, x, c, get_pixel(im, x, y, c));
+            }
+        }
+    }
+    return reflected;
 }
 
 // Smooths an image using separable Gaussian filter.
@@ -93,9 +123,42 @@ image make_1d_gaussian(float sigma)
 // returns: smoothed image.
 image smooth_image(image im, float sigma)
 {
-    // TODO: use two convolutions with 1d gaussian filter.
-    return copy_image(im);
+    image filter = make_1d_gaussian(sigma);
+    image convolved_once = convolve_image(im, filter, 1);
+    image reflected_filter = reflect_img(filter);
+    image convolved_twice = convolve_image(convolved_once, reflected_filter, 1);
+    free_image(filter);
+    free_image(reflected_filter);
+    free_image(convolved_once);
+    return convolved_twice;
 }
+
+
+void square_image_values(image im) {
+    for(int x = 0; x < im.w; ++x) {
+        for(int y = 0; y < im.h; ++y) {
+            for(int c = 0; c < im.c; ++c) {
+                set_pixel(im, x, y, c, powf(get_pixel(im, x, y, c), 2));
+            }
+        }
+    }
+}
+
+image multiply_images_elementwise(image im, image im2) {
+    assert(im.h == im2.h);
+    assert(im.w == im2.w);
+    assert(im.c == im2.c);
+    image elementwise_product = make_image(im.w, im.h, im.c);
+    for(int x = 0; x < im.w; ++x) {
+        for(int y = 0; y < im.h; ++y) {
+            for(int c = 0; c < im.c; ++c) {
+                set_pixel(elementwise_product, x, y, c, get_pixel(im, x, y, c) * get_pixel(im2, x, y, c));
+            }
+        }
+    }
+    return elementwise_product;
+}
+
 
 // Calculate the structure matrix of an image.
 // image im: the input image.
@@ -105,8 +168,53 @@ image smooth_image(image im, float sigma)
 image structure_matrix(image im, float sigma)
 {
     image S = make_image(im.w, im.h, 3);
-    // TODO: calculate structure matrix for im.
+
+    image gx_filter = make_gx_filter();
+    image gy_filter = make_gy_filter();
+    image gauss = make_gaussian_filter(sigma);
+
+    image ix = convolve_image(im, gx_filter, 0);
+    image iy = convolve_image(im, gy_filter, 0);
+    image ix_iy = multiply_images_elementwise(ix, iy);
+
+    square_image_values(ix);
+    image ix_weighted = convolve_image(ix, gauss, 0);
+
+    square_image_values(iy);
+    image iy_weighted = convolve_image(iy, gauss, 0);
+    image ix_iy_weighted = convolve_image(ix_iy, gauss, 0);
+
+    assert(ix_weighted.c == 1);
+    assert(iy_weighted.c == 1);
+    int c = 0;
+    for(int x = 0; x < im.w; ++x) {
+        for(int y = 0; y < im.h; ++y) {
+                set_pixel(S, x, y, c, get_pixel(ix_weighted, x, y, 0));
+        }
+    }
+    ++c;
+    for(int x = 0; x < im.w; ++x) {
+        for(int y = 0; y < im.h; ++y) {
+            set_pixel(S, x, y, c, get_pixel(iy_weighted, x, y, 0));
+        }
+    }
+    ++c;
+    for(int x = 0; x < im.w; ++x) {
+        for(int y = 0; y < im.h; ++y) {
+            set_pixel(S, x, y, c, get_pixel(ix_iy_weighted, x, y, 0));
+        }
+    }
+
     return S;
+}
+
+float trace(image im) {
+    assert (im.w == im.h);
+    float f = 0;
+    for (int i = 0; i < im.w; ++i) {
+        f+=get_pixel(im, i,i,0);
+    }
+    return f;
 }
 
 // Estimate the cornerness of each pixel given a structure matrix S.
@@ -117,7 +225,31 @@ image cornerness_response(image S)
     image R = make_image(S.w, S.h, 1);
     // TODO: fill in R, "cornerness" for each pixel using the structure matrix.
     // We'll use formulation det(S) - alpha * trace(S)^2, alpha = .06.
+//    float alpha = 0.06f;
+//    for (int i = 0; i < S.h; ++i) {
+//        for (int j = 0; j < S.w; ++j) {
+//            float ad = get_pixel(S, i, j, 0) * get_pixel(S, i, j, 1);
+//            float bc = powf(get_pixel(S, i, j, 3), 2);
+//            float trace = ad;
+//            set_pixel(R, i, j, 0, (ad - bc) * alpha - alpha * trace * trace);
+//        }
+//    }
     return R;
+}
+
+float determinant_internal(image im, int i, int j) {
+    float det = 0;
+    if (i == 0) {
+
+    } else {
+        float polarity = 1;
+        for (int x = 0; x < im.w; ++x) {
+            if (x !=j) {
+                det += polarity * get_pixel(im, i, x, 0) * determinant_internal(im, i - 1, j);
+                polarity *=-1;
+            }
+        }
+    }
 }
 
 // Perform non-max supression on an image of feature responses.

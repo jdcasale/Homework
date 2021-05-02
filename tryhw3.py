@@ -1,5 +1,11 @@
 from uwimg import *
 
+def structure():
+    im = load_image("data/dogbw.png")
+    struct = structure_matrix(im, 2)
+    feature_normalize(struct)
+    save_png(struct, "output/structure")
+
 def draw_corners():
     im = load_image("data/Rainier1.png")
     detect_and_draw_corners(im, 2, 50, 3)
@@ -68,8 +74,9 @@ def field_panorama():
     save_image(pan5, "output/field_panorama_5")
 
 os.makedirs('output', exist_ok=True)
-draw_corners()
-draw_matches()
-easy_panorama()
-rainier_panorama()
-field_panorama()
+structure()
+# draw_corners()
+# draw_matches()
+# easy_panorama()
+# rainier_panorama()
+# field_panorama()
