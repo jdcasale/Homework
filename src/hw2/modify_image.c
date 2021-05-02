@@ -163,14 +163,13 @@ float convolve_internal(
 }
 
 image sum_channels(image im) {
-    int channel_size = im.w * im.h;
     image summed = make_image(im.w, im.h, 1);
-    for (int i = 0; i < channel_size; ++i) {
-        float r_val = im.data[i];
-        float g_val = im.data[i + channel_size];
-        float b_val = im.data[i + channel_size * 2];
-        float y_val = r_val + g_val + b_val;
-        summed.data[i] = y_val;
+    for (int i = 0; i < im.c; ++i) {
+        for (int x = 0; x < im.w; ++x) {
+            for (int y = 0; y < im.h; ++y) {
+                set_pixel(summed,x,y,0, get_pixel(summed,x,y,0) + get_pixel(im, x,y,i));
+            }
+        }
     }
     return summed;
 }
@@ -322,8 +321,8 @@ image make_gaussian_filter(float sigma) {
         kernel_size++;
     }
 
-    if (sigma == 4) {
-        assert(kernel_size == 25);
+    if (sigma == 2) {
+        assert(kernel_size == 13);
     }
     int start = -kernel_size / 2;
     int end = kernel_size / 2;
@@ -333,11 +332,12 @@ image make_gaussian_filter(float sigma) {
 
     // instead of adding/subtracting 0.5 and calculating distange to the center axis of the kernel, in effect adding
     // a mu term to the gaussian, shift the window to the left so that mu = 0 and we don't need to do extra math
+    float pi = 3.14159265358979323846264338327950288f;
     for (int x = start; x <= end; x++) {
         for (int y = start; y <= end; y++) {
             float x2 = (float) x;
             float y2 = (float) y;
-            float val = (expf(-(x2 * x2 + y2 * y2) / denominator)) / (denominator * M_PI);
+            float val = (expf(-(x2 * x2 + y2 * y2) / denominator)) /(denominator * pi);
             set_pixel(filter, x + end, y + end, 0, val);
         }
     }
