@@ -10,7 +10,7 @@ obj/*
 .DS_Store
 !figs/*
 !data/*
-!output/*
+output/*
 
 main
 
