@@ -62,12 +62,18 @@ int same_matrix(matrix m, matrix n)
 {
     if(m.rows != n.rows || m.cols != n.cols) return 0;
     int i,j;
+    int same_px = 0;
+    int error_px = 0;
     for(i = 0; i < m.rows; ++i){
         for(j = 0; j < m.cols; ++j){
-            if(!within_eps(m.data[i][j], n.data[i][j], EPS)) return 0;
+            if(!within_eps(m.data[i][j], n.data[i][j], EPS)) {
+                printf("The value at index i: %d j: %d should be %f, but it is %f! same_px: %d, error_px: %d \n", i, j, m.data[i][j], n.data[i][j], same_px, error_px);
+                ++error_px;
+            }
+            else {++ same_px;}
         }
     }
-    return 1;
+    return error_px == 0;
 }
 
 int same_image(image a, image b, float eps)
@@ -579,6 +585,6 @@ void test_hw3()
     test_structure();
     test_cornerness();
     test_projection();
-//    test_compute_homography();
+    test_compute_homography();
     printf("%d tests, %d passed, %d failed\n", tests_total, tests_total-tests_fail, tests_fail);
 }
