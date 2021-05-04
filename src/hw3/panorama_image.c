@@ -263,8 +263,9 @@ int model_inliers(matrix H, match *m, int n, float thresh)
 // int n: number of elements in matches.
 void randomize_matches(match *m, int n)
 {
-    for(int i = n; i > 0; --i) {
+    for(int i = n-1; i > 0; --i) {
         int j = arc4random() % i;
+//        printf("i %d, j: %d\n", i, j);
         match swap = m[j];
         m[j] = m[i];
         m[i] = swap;
@@ -349,10 +350,38 @@ matrix compute_homography(match *matches, int n)
 // returns: matrix representing most common homography between matches.
 matrix RANSAC(match *m, int n, float thresh, int k, int cutoff)
 {
-    int e;
+//    int e;
+    int inliers = 0;
     int best = 0;
+    float best_error = 100000000.0f;
     matrix Hb = make_translation_homography(256, 0);
     // TODO: fill in RANSAC algorithm.
+    for(int i = 0; i < k; ++i) {
+        randomize_matches(m, n);
+        matrix initial_homog = compute_homography(m, 4);
+        print_matrix(initial_homog);
+//        for(int j = 0; j < n; ++j) {
+//            inliers += point_distance(project_point(initial_homog, m[i].p), m[i].q) < thresh;
+//        }
+        int tot_inliers = model_inliers(initial_homog, m, n, thresh);
+//        float squared_error = 0.0f;
+//        for(int j = 0; j < n; ++j) {
+//            squared_error += point_distance(project_point(initial_homog, m[i].p), m[i].q);
+//        }
+        if (tot_inliers > best) {
+            best = tot_inliers;
+            matrix second_homog = compute_homography(m, tot_inliers);
+            float squared_error = 0.0f;
+            for(int j = 0; j < n; ++j) {
+                squared_error += point_distance(project_point(initial_homog, m[j].p), m[j].q);
+            }
+            if (squared_error < best_error){
+                printf("best error %f", squared_error);
+                best_error = squared_error;
+                Hb = second_homog;
+            }
+        }
+    }
     // for k iterations:
     //     shuffle the matches
     //     compute a homography with a few matches (how many??)

@@ -242,7 +242,7 @@ matrix matrix_invert(matrix m)
             }
         }
         if(index == -1){
-            //fprintf(stderr, "Can't do it, sorry!\n");
+            fprintf(stderr, "Can't do it, sorry!\n");
             free_matrix(c);
             return none;
         }
