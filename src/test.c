@@ -578,7 +578,7 @@ void test_hw3()
 {
     test_structure();
     test_cornerness();
-//    test_projection();
+    test_projection();
 //    test_compute_homography();
     printf("%d tests, %d passed, %d failed\n", tests_total, tests_total-tests_fail, tests_fail);
 }

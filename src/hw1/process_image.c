@@ -34,6 +34,9 @@ float get_pixel(image im, int x, int y, int c)
 
 void set_pixel(image im, int x, int y, int c, float v)
 {
+    if( x >= im.w || y >= im.h || c >= im.c || x < 0 || y < 0 || c < 0 ) {
+        return;
+    }
     int channel_offset = c * im.w * im.h;
     int in_channel_offset = y * im.w + x;
     im.data[channel_offset + in_channel_offset] = v;

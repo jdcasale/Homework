@@ -8,9 +8,10 @@ def structure():
 
 def response():
     im = load_image("data/dogbw.png")
-    struct = cornerness_response(im)
-    feature_normalize(struct)
-    save_png(struct, "output/response")
+    struct = structure_matrix(im, 2)
+    corner = cornerness_response(struct)
+    feature_normalize(corner)
+    save_png(corner, "output/response")
 
 def draw_corners():
     im = load_image("data/Rainier1.png")
@@ -81,9 +82,9 @@ def field_panorama():
 
 os.makedirs('output', exist_ok=True)
 # structure()
-response()
+# response()
 # draw_corners()
-# draw_matches()
+draw_matches()
 # easy_panorama()
 # rainier_panorama()
 # field_panorama()

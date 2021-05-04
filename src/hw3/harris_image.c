@@ -246,12 +246,29 @@ image cornerness_response(image S)
 // returns: image with only local-maxima responses within w pixels.
 image nms_image(image im, int w)
 {
+    assert(im.c == 1);
     image r = copy_image(im);
     // TODO: perform NMS on the response map.
     // for every pixel in the image:
     //     for neighbors within w:
     //         if neighbor response greater than pixel response:
     //             set response to be very low (I use -999999 [why not 0??])
+    for(int x = 0; x < im.w; ++x) {
+        for(int y = 0; y < im.h; ++y) {
+
+            float val = get_pixel(r, x,y,0);
+            for(int wx = -w; wx < w+1; ++wx) {
+                for(int wy = -w; wy < w+1; ++wy) {
+
+                    float neighbor = get_pixel(r, x + wx,y + wy,0);
+                    if (neighbor > val) {
+                        // suppress pixel as it is not a local max
+                        set_pixel(r, x,y,0, -999999.0f);
+                    }
+                }
+            }
+        }
+    }
     return r;
 }
 
@@ -274,14 +291,26 @@ descriptor *harris_corner_detector(image im, float sigma, float thresh, int nms,
     image Rnms = nms_image(R, nms);
 
 
+    assert(Rnms.c == 1);
     //TODO: count number of responses over threshold
-    int count = 1; // change this
+    int count = 0; // change this
+    for (int i = 0; i < Rnms.w * Rnms.h; ++i) {
+        if (Rnms.data[i] > thresh) {++count;}
+    }
+    printf("count: %d  \n\n", count);
 
-    
     *n = count; // <- set *n equal to number of corners in image.
     descriptor *d = calloc(count, sizeof(descriptor));
     //TODO: fill in array *d with descriptors of corners, use describe_index.
-
+    int di = 0;
+    for(int x = 0; x < im.w; ++x){
+        for(int y = 0; y < im.h; ++y){
+            int idx = y * im.w + x;
+            if (Rnms.data[idx] > thresh) {
+                d[di++] = describe_index(im, idx);
+            }
+        }
+    }
 
     free_image(S);
     free_image(R);

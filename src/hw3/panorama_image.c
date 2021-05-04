@@ -119,8 +119,7 @@ float l1_distance(float *a, float *b, int n)
 {
     float sum = 0.0f;
     for (int i = 0; i < n; ++i) {
-        sum+=a[i];
-        sum+=b[i];
+        sum+=fabs(a[i] - b[i]);
     }
     return 0;
 }
@@ -135,21 +134,34 @@ match *match_descriptors(descriptor *a, int an, descriptor *b, int bn, int *mn)
 {
     int i,j;
 
+
     // We will have at most an matches.
     *mn = an;
     match *m = calloc(an, sizeof(match));
     for(j = 0; j < an; ++j){
         // TODO: for every descriptor in a, find best match in b.
         // record ai as the index in *a and bi as the index in *b.
-        int bind = 0; // <- find the best match
+
+        float distance = 999999999.0f;
+        int bind = 0;
+        for(int i = 0; i < bn ; ++i) {
+            float dist = l1_distance(a[j].data, b[j].data, 75);
+            if (dist < distance) {
+                distance = dist;
+                bind = i; // <- find the best match
+            }
+        }
+
+        printf("min dist for j: %d = %f\n", j, distance);
+
         m[j].ai = j;
         m[j].bi = bind; // <- should be index in b.
         m[j].p = a[j].p;
         m[j].q = b[bind].p;
-        m[j].distance = 0; // <- should be the smallest L1 distance!
+        m[j].distance = distance; // <- should be the smallest L1 distance!
     }
 
-    int count = 0;
+    int count = an;
     int *seen = calloc(bn, sizeof(int));
     // TODO: we want matches to be injective (one-to-one).
     // Sort matches based on distance using match_compare and qsort.
@@ -157,6 +169,9 @@ match *match_descriptors(descriptor *a, int an, descriptor *b, int bn, int *mn)
     // Each point should only be a part of one match.
     // Some points will not be in a match.
     // In practice just bring good matches to front of list, set *mn.
+
+
+
     *mn = count;
     free(seen);
     return m;
@@ -170,6 +185,9 @@ point project_point(matrix H, point p)
 {
     matrix c = make_matrix(3, 1);
     // TODO: project point p with homography H.
+    c.data[0][0] = p.x;
+    c.data[0][1] = p.y;
+    c.data[0][2] = 1.0f;
     // Remember that homogeneous coordinates are equivalent up to scalar.
     // Have to divide by.... something...
     point q = make_point(0, 0);
@@ -179,10 +197,8 @@ point project_point(matrix H, point p)
 // Calculate L2 distance between two points.
 // point p, q: points.
 // returns: L2 distance between them.
-float point_distance(point p, point q)
-{
-    // TODO: should be a quick one.
-    return 0;
+float point_distance(point p, point q) {
+    return sqrtf(powf(p.x - q.x, 2) + powf(p.y - q.y, 2));
 }
 
 // Count number of inliers in a set of matches. Should also bring inliers
