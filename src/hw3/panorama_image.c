@@ -321,7 +321,7 @@ matrix compute_homography(match *matches, int n)
     matrix none = {0};
     if(!a.data) {
         printf("no solution\n\n\n");
-        return none;
+        return a;
     }
 
     matrix H = make_matrix(3, 3);
@@ -353,32 +353,23 @@ matrix RANSAC(match *m, int n, float thresh, int k, int cutoff)
 //    int e;
     int inliers = 0;
     int best = 0;
-    float best_error = 100000000.0f;
     matrix Hb = make_translation_homography(256, 0);
     // TODO: fill in RANSAC algorithm.
     for(int i = 0; i < k; ++i) {
         randomize_matches(m, n);
         matrix initial_homog = compute_homography(m, 4);
-        print_matrix(initial_homog);
-//        for(int j = 0; j < n; ++j) {
-//            inliers += point_distance(project_point(initial_homog, m[i].p), m[i].q) < thresh;
-//        }
-        int tot_inliers = model_inliers(initial_homog, m, n, thresh);
-//        float squared_error = 0.0f;
-//        for(int j = 0; j < n; ++j) {
-//            squared_error += point_distance(project_point(initial_homog, m[i].p), m[i].q);
-//        }
-        if (tot_inliers > best) {
-            best = tot_inliers;
-            matrix second_homog = compute_homography(m, tot_inliers);
-            float squared_error = 0.0f;
-            for(int j = 0; j < n; ++j) {
-                squared_error += point_distance(project_point(initial_homog, m[j].p), m[j].q);
-            }
-            if (squared_error < best_error){
-                printf("best error %f", squared_error);
-                best_error = squared_error;
-                Hb = second_homog;
+        if (initial_homog.data) {
+            print_matrix(initial_homog);
+            int tot_inliers = model_inliers(initial_homog, m, n, thresh);
+            if (tot_inliers > best) {
+                best = tot_inliers;
+                printf("best inliers %d\n", best);
+                Hb = compute_homography(m, tot_inliers);
+                int new_tot_inliers = model_inliers(Hb, m, best, thresh);
+                printf("new best inliers %d\n", new_tot_inliers);
+                if (new_tot_inliers > cutoff) {
+                    return Hb;
+                }
             }
         }
     }
@@ -435,7 +426,7 @@ image combine_images(image a, image b, matrix H)
     for(k = 0; k < a.c; ++k){
         for(j = 0; j < a.h; ++j){
             for(i = 0; i < a.w; ++i){
-                // TODO: fill in.
+                set_pixel(c, i - dx, j - dy, k, get_pixel(a, i, j, k));
             }
         }
     }
@@ -445,6 +436,42 @@ image combine_images(image a, image b, matrix H)
     // and see if their projection from a coordinates to b coordinates falls
     // inside of the bounds of image b. If so, use bilinear interpolation to
     // estimate the value of b at that projection, then fill in image c.
+
+//    for(k = 0; k < b.c; ++k){
+//        for(j = 0; j < b.h; ++j){
+//            for(i = 0; i < b.w; ++i){
+//                point p;
+//                p.x = i;
+//                p.y = j;
+////                get_pixel(a, i, j, k);
+//
+//                point p2 = project_point(Hinv, p);
+//                if (p2.x < c.w && p2.y < c.h && p2.x > -1 && p2.y > -1 ) {
+//
+//                    set_pixel(c, p2.x, p2.y, k, get_pixel(b, i, j, k));
+//                }
+////                set_pixel(c, i - dx, j - dy, k, get_pixel(a, i, j, k));
+//            }
+//        }
+//    }
+
+    for(k = 0; k < c.c; ++k){
+        for(j = 0; j < c.h; ++j){
+            for(i = 0; i < c.w; ++i){
+                if (get_pixel(a, i, j, k) > 0){
+                    point p;
+                    p.x = i;
+                    p.y = j;
+                    point p2 = project_point(H, p);
+                    if (p2.x < b.w && p2.y < b.h && p2.x > -1 && p2.y > -1 ) {
+
+                        set_pixel(c, i - dx, j - dy, k, bilinear_interpolate(b,p2.x, p2.y, k));
+                    }
+                }
+            }
+        }
+    }
+
 
     return c;
 }

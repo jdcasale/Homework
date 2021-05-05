@@ -27,7 +27,7 @@ def draw_matches():
 def easy_panorama():
     im1 = load_image("data/Rainier1.png")
     im2 = load_image("data/Rainier2.png")
-    pan = panorama_image(im1, im2, thresh=50, draw=1)
+    pan = panorama_image(im1, im2, thresh=50, draw=0)
     save_image(pan, "output/easy_panorama")
 
 def rainier_panorama():
