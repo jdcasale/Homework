@@ -141,23 +141,21 @@ match *match_descriptors(descriptor *a, int an, descriptor *b, int bn, int *mn)
         // TODO: for every descriptor in a, find best match in b.
         // record ai as the index in *a and bi as the index in *b.
 
-        float distance = 999999999.0f;
+        float smallest_dist = 999999999.0f;
         int bind = 0;
         for(i = 0; i < bn ; ++i) {
-            float dist = l1_distance(a[j].data, b[i].data, 75);
-            if (dist < distance) {
-                distance = dist;
+            float dist = l1_distance(a[j].data, b[i].data, a->n);
+            if (dist < smallest_dist) {
+                smallest_dist = dist;
                 bind = i; // <- find the best match
             }
         }
-
-//        printf("min dist for j: %d = %f, bind=%d\n", j, distance, bind);
 
         m[j].ai = j;
         m[j].bi = bind; // <- should be index in b.
         m[j].p = a[j].p;
         m[j].q = b[bind].p;
-        m[j].distance = distance; // <- should be the smallest L1 distance!
+        m[j].distance = smallest_dist; // <- should be the smallest L1 smallest_dist!
     }
 
     int count = 0;
@@ -176,20 +174,22 @@ match *match_descriptors(descriptor *a, int an, descriptor *b, int bn, int *mn)
     for(i = 0; i < an; ++i){
         if (!seen[m[i].bi]) {
 //            printf("i: %d\n", i);
+//            seen[m[i].bi] = i;
             seen[m[i].bi] = i;
             count += 1;
         }
     }
 
-    for(i = 0; i < count+1; ++i){
-        m[i] = m[seen[i]];
+    match *m2 = calloc(count, sizeof(match));
+
+    for(i = 0; i < count; ++i){
+        m2[i] = m[seen[i]];
     }
 
-//    printf("count: %d, bn %d \n", count, bn);
 
     *mn = count;
     free(seen);
-    return m;
+    return m2;
 }
 
 // Apply a projective transformation to a point.
@@ -252,7 +252,6 @@ int model_inliers(matrix H, match *m, int n, float thresh)
         count += point_distance(project_point(H, m[i].p), m[i].q) < thresh;
     }
 
-
     // i.e. distance(H*p, q) < thresh
     // Also, sort the matches m so the inliers are the first 'count' elements.
     return count;
@@ -313,6 +312,7 @@ matrix compute_homography(match *matches, int n)
         b.data[second_i][0] = yp;
 
     }
+
     matrix a = solve_system(M, b);
 
     free_matrix(M); free_matrix(b); 
@@ -320,12 +320,11 @@ matrix compute_homography(match *matches, int n)
     // If a solution can't be found, return empty matrix;
     matrix none = {0};
     if(!a.data) {
-        printf("no solution\n\n\n");
-        return a;
+//        printf("no solution\n\n\n");
+        return none;
     }
 
     matrix H = make_matrix(3, 3);
-
 
     H.data[0][0] = a.data[0][0];
     H.data[0][1] = a.data[1][0];
@@ -341,6 +340,15 @@ matrix compute_homography(match *matches, int n)
     return H;
 }
 
+//float error(match *m, int n, matrix  H)
+//{
+//    float e = 0.0f;
+//    for(int i = 0; i < n; ++i) {
+//        e += point_distance(project_point(H, m[i].p), m[i].q);
+//    }
+//    return e;
+//}
+
 // Perform RANdom SAmple Consensus to calculate homography for noisy matches.
 // match *m: set of matches.
 // int n: number of matches.
@@ -350,8 +358,6 @@ matrix compute_homography(match *matches, int n)
 // returns: matrix representing most common homography between matches.
 matrix RANSAC(match *m, int n, float thresh, int k, int cutoff)
 {
-//    int e;
-    int inliers = 0;
     int best = 0;
     matrix Hb = make_translation_homography(256, 0);
     // TODO: fill in RANSAC algorithm.
@@ -359,7 +365,6 @@ matrix RANSAC(match *m, int n, float thresh, int k, int cutoff)
         randomize_matches(m, n);
         matrix initial_homog = compute_homography(m, 4);
         if (initial_homog.data) {
-            print_matrix(initial_homog);
             int tot_inliers = model_inliers(initial_homog, m, n, thresh);
             if (tot_inliers > best) {
                 best = tot_inliers;
@@ -368,6 +373,7 @@ matrix RANSAC(match *m, int n, float thresh, int k, int cutoff)
                 int new_tot_inliers = model_inliers(Hb, m, best, thresh);
                 printf("new best inliers %d\n", new_tot_inliers);
                 if (new_tot_inliers > cutoff) {
+                    print_matrix(Hb);
                     return Hb;
                 }
             }
@@ -391,8 +397,9 @@ matrix RANSAC(match *m, int n, float thresh, int k, int cutoff)
 // returns: combined image stitched together.
 image combine_images(image a, image b, matrix H)
 {
+//    print_matrix(H);
     matrix Hinv = matrix_invert(H);
-
+//    print_matrix(Hinv);
     // Project the corners of image b into image a coordinates.
     point c1 = project_point(Hinv, make_point(0,0));
     point c2 = project_point(Hinv, make_point(b.w-1, 0));
@@ -419,14 +426,14 @@ image combine_images(image a, image b, matrix H)
         return copy_image(a);
     }
 
-    int i,j,k;
+    int xi,yi,ci;
     image c = make_image(w, h, a.c);
     
     // Paste image a into the new image offset by dx and dy.
-    for(k = 0; k < a.c; ++k){
-        for(j = 0; j < a.h; ++j){
-            for(i = 0; i < a.w; ++i){
-                set_pixel(c, i - dx, j - dy, k, get_pixel(a, i, j, k));
+    for(ci = 0; ci < a.c; ++ci){
+        for(yi = 0; yi < a.h; ++yi){
+            for(xi = 0; xi < a.w; ++xi){
+                set_pixel(c, xi - dx, yi - dy, ci, get_pixel(a, xi, yi, ci));
             }
         }
     }
@@ -437,37 +444,21 @@ image combine_images(image a, image b, matrix H)
     // inside of the bounds of image b. If so, use bilinear interpolation to
     // estimate the value of b at that projection, then fill in image c.
 
-//    for(k = 0; k < b.c; ++k){
-//        for(j = 0; j < b.h; ++j){
-//            for(i = 0; i < b.w; ++i){
-//                point p;
-//                p.x = i;
-//                p.y = j;
-////                get_pixel(a, i, j, k);
-//
-//                point p2 = project_point(Hinv, p);
-//                if (p2.x < c.w && p2.y < c.h && p2.x > -1 && p2.y > -1 ) {
-//
-//                    set_pixel(c, p2.x, p2.y, k, get_pixel(b, i, j, k));
-//                }
-////                set_pixel(c, i - dx, j - dy, k, get_pixel(a, i, j, k));
-//            }
-//        }
-//    }
-
-    for(k = 0; k < c.c; ++k){
-        for(j = 0; j < c.h; ++j){
-            for(i = 0; i < c.w; ++i){
-                if (get_pixel(a, i, j, k) > 0){
+    for(ci = 0; ci < c.c; ++ci){
+        for(yi = 0; yi < c.h; ++yi){
+            for(xi = 0; xi < c.w; ++xi){
+//                if (xi - dx > a.w && xi >=dx && yi - dy > a.h && yi >=dy){
+//                if (get_pixel(c, xi, yi, ci) < 0.02f){
                     point p;
-                    p.x = i;
-                    p.y = j;
+                    p.x = xi + dx;
+                    p.y = yi + dy;
                     point p2 = project_point(H, p);
-                    if (p2.x < b.w && p2.y < b.h && p2.x > -1 && p2.y > -1 ) {
 
-                        set_pixel(c, i - dx, j - dy, k, bilinear_interpolate(b,p2.x, p2.y, k));
+                    // ensure that the projected point is inside of b before recording in output image
+                    if (p2.x < b.w && p2.y < b.h && p2.x > -1 && p2.y > -1 ) {
+                        set_pixel(c, xi, yi, ci, bilinear_interpolate(b, p2.x, p2.y, ci));
                     }
-                }
+//                }
             }
         }
     }
@@ -522,9 +513,30 @@ image panorama_image(image a, image b, float sigma, float thresh, int nms, float
 // image im: image to project.
 // float f: focal length used to take image (in pixels).
 // returns: image projected onto cylinder, then flattened.
-image cylindrical_project(image im, float f)
+image cylindrical_project(image im, float fl)
 {
     //TODO: project image onto a cylinder
     image c = copy_image(im);
+
+    float xc = ((float)c.w)/2.0f;
+    float yc = ((float)c.h)/2.0f;
+    for(int y = 0; y < c.h; ++y) {
+        for(int x = 0; x < c.w; ++x) {
+            for(int ci = 0; ci < c.c; ++ci) {
+                float theta =  ((float)x-xc)/fl;
+                float h = ((float)y-yc)/fl;
+                float Xp = sinf(theta);
+                float Yp = h;
+                float Zp = cos(theta);
+                float xp = fl * Xp/Zp+ xc;
+                float yp = fl * Yp/Zp+ yc;
+//                bilinear_interpolate()
+//                set_pixel(c, xp, yp)
+            }
+        }
+    }
+
+
+
     return c;
 }

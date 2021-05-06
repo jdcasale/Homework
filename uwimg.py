@@ -224,7 +224,7 @@ panorama_image_lib = lib.panorama_image
 panorama_image_lib.argtypes = [IMAGE, IMAGE, c_float, c_float, c_int, c_float, c_int, c_int, c_int]
 panorama_image_lib.restype = IMAGE
 
-def panorama_image(a, b, sigma=2, thresh=5, nms=3, inlier_thresh=2, iters=10000, cutoff=30, draw=1):
+def panorama_image(a, b, sigma=2, thresh=5, nms=3, inlier_thresh=2, iters=10000, cutoff=30, draw=0):
     return panorama_image_lib(a, b, sigma, thresh, nms, inlier_thresh, iters, cutoff, draw)
 
 if __name__ == "__main__":
