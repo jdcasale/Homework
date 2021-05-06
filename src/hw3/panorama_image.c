@@ -171,21 +171,13 @@ match *match_descriptors(descriptor *a, int an, descriptor *b, int bn, int *mn)
     for(i = 0; i < bn; ++i){
         seen[i] = 0;
     }
+    match *m2 = calloc(an, sizeof(match));
     for(i = 0; i < an; ++i){
         if (!seen[m[i].bi]) {
-//            printf("i: %d\n", i);
-//            seen[m[i].bi] = i;
             seen[m[i].bi] = i;
-            count += 1;
+            m2[count++] = m[i];
         }
     }
-
-    match *m2 = calloc(count, sizeof(match));
-
-    for(i = 0; i < count; ++i){
-        m2[i] = m[seen[i]];
-    }
-
 
     *mn = count;
     free(seen);
@@ -264,7 +256,6 @@ void randomize_matches(match *m, int n)
 {
     for(int i = n-1; i > 0; --i) {
         int j = arc4random() % i;
-//        printf("i %d, j: %d\n", i, j);
         match swap = m[j];
         m[j] = m[i];
         m[i] = swap;
@@ -320,7 +311,6 @@ matrix compute_homography(match *matches, int n)
     // If a solution can't be found, return empty matrix;
     matrix none = {0};
     if(!a.data) {
-//        printf("no solution\n\n\n");
         return none;
     }
 
@@ -340,15 +330,6 @@ matrix compute_homography(match *matches, int n)
     return H;
 }
 
-//float error(match *m, int n, matrix  H)
-//{
-//    float e = 0.0f;
-//    for(int i = 0; i < n; ++i) {
-//        e += point_distance(project_point(H, m[i].p), m[i].q);
-//    }
-//    return e;
-//}
-
 // Perform RANdom SAmple Consensus to calculate homography for noisy matches.
 // match *m: set of matches.
 // int n: number of matches.
@@ -359,6 +340,7 @@ matrix compute_homography(match *matches, int n)
 matrix RANSAC(match *m, int n, float thresh, int k, int cutoff)
 {
     int best = 0;
+    int best_tot = 0;
     matrix Hb = make_translation_homography(256, 0);
     // TODO: fill in RANSAC algorithm.
     for(int i = 0; i < k; ++i) {
@@ -369,9 +351,14 @@ matrix RANSAC(match *m, int n, float thresh, int k, int cutoff)
             if (tot_inliers > best) {
                 best = tot_inliers;
                 printf("best inliers %d\n", best);
-                Hb = compute_homography(m, tot_inliers);
-                int new_tot_inliers = model_inliers(Hb, m, best, thresh);
+                matrix maybeH = compute_homography(m, tot_inliers);
+
+                int new_tot_inliers = model_inliers(maybeH, m, best, thresh);
                 printf("new best inliers %d\n", new_tot_inliers);
+                if (new_tot_inliers > best_tot) {
+                    Hb = maybeH;
+                    best_tot = new_tot_inliers;
+                }
                 if (new_tot_inliers > cutoff) {
                     print_matrix(Hb);
                     return Hb;
@@ -397,9 +384,7 @@ matrix RANSAC(match *m, int n, float thresh, int k, int cutoff)
 // returns: combined image stitched together.
 image combine_images(image a, image b, matrix H)
 {
-//    print_matrix(H);
     matrix Hinv = matrix_invert(H);
-//    print_matrix(Hinv);
     // Project the corners of image b into image a coordinates.
     point c1 = project_point(Hinv, make_point(0,0));
     point c2 = project_point(Hinv, make_point(b.w-1, 0));
@@ -447,8 +432,6 @@ image combine_images(image a, image b, matrix H)
     for(ci = 0; ci < c.c; ++ci){
         for(yi = 0; yi < c.h; ++yi){
             for(xi = 0; xi < c.w; ++xi){
-//                if (xi - dx > a.w && xi >=dx && yi - dy > a.h && yi >=dy){
-//                if (get_pixel(c, xi, yi, ci) < 0.02f){
                     point p;
                     p.x = xi + dx;
                     p.y = yi + dy;
@@ -458,7 +441,6 @@ image combine_images(image a, image b, matrix H)
                     if (p2.x < b.w && p2.y < b.h && p2.x > -1 && p2.y > -1 ) {
                         set_pixel(c, xi, yi, ci, bilinear_interpolate(b, p2.x, p2.y, ci));
                     }
-//                }
             }
         }
     }
@@ -516,22 +498,29 @@ image panorama_image(image a, image b, float sigma, float thresh, int nms, float
 image cylindrical_project(image im, float fl)
 {
     //TODO: project image onto a cylinder
-    image c = copy_image(im);
 
-    float xc = ((float)c.w)/2.0f;
-    float yc = ((float)c.h)/2.0f;
+    float xc = ((float)im.w)/2.0f;
+    float yc = ((float)im.h)/2.0f;
+
+    float theta_nought =  (0.0f-xc)/fl;
+    float Xp_nought = sinf(theta_nought);
+    float Zp_nought = cosf(theta_nought);
+    float xp_offset = fabsf(fl * Xp_nought/Zp_nought+ xc);
+
+    image c = make_image(im.w - (int)(2 * xp_offset), im.h, im.c);
+
     for(int y = 0; y < c.h; ++y) {
-        for(int x = 0; x < c.w; ++x) {
+        for(int x = xp_offset; x < c.w + xp_offset; ++x) {
             for(int ci = 0; ci < c.c; ++ci) {
                 float theta =  ((float)x-xc)/fl;
                 float h = ((float)y-yc)/fl;
                 float Xp = sinf(theta);
                 float Yp = h;
-                float Zp = cos(theta);
+                float Zp = cosf(theta);
                 float xp = fl * Xp/Zp+ xc;
                 float yp = fl * Yp/Zp+ yc;
-//                bilinear_interpolate()
-//                set_pixel(c, xp, yp)
+
+                set_pixel(c, x- xp_offset , y, ci, bilinear_interpolate(im, xp, yp, ci));
             }
         }
     }
