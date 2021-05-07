@@ -255,7 +255,7 @@ int model_inliers(matrix H, match *m, int n, float thresh)
 void randomize_matches(match *m, int n)
 {
     for(int i = n-1; i > 0; --i) {
-        int j = arc4random() % i;
+        int j = rand() % i;
         match swap = m[j];
         m[j] = m[i];
         m[i] = swap;
@@ -339,7 +339,7 @@ matrix compute_homography(match *matches, int n)
 // returns: matrix representing most common homography between matches.
 matrix RANSAC(match *m, int n, float thresh, int k, int cutoff)
 {
-    int best = 0;
+    int best_initial_inliers = 0;
     int best_tot = 0;
     matrix Hb = make_translation_homography(256, 0);
     // TODO: fill in RANSAC algorithm.
@@ -347,17 +347,15 @@ matrix RANSAC(match *m, int n, float thresh, int k, int cutoff)
         randomize_matches(m, n);
         matrix initial_homog = compute_homography(m, 4);
         if (initial_homog.data) {
-            int tot_inliers = model_inliers(initial_homog, m, n, thresh);
-            if (tot_inliers > best) {
-                best = tot_inliers;
-                printf("best inliers %d\n", best);
-                matrix maybeH = compute_homography(m, tot_inliers);
-
-                int new_tot_inliers = model_inliers(maybeH, m, best, thresh);
-                printf("new best inliers %d\n", new_tot_inliers);
+            int initial_inliers = model_inliers(initial_homog, m, n, thresh);
+            if (initial_inliers > best_initial_inliers) {
+                matrix maybeH = compute_homography(m, initial_inliers);
+                int new_tot_inliers = model_inliers(maybeH, m, n, thresh);
                 if (new_tot_inliers > best_tot) {
+                    best_initial_inliers = initial_inliers;
                     Hb = maybeH;
                     best_tot = new_tot_inliers;
+                    printf("new best_total_inliers %d\n", best_tot);
                 }
                 if (new_tot_inliers > cutoff) {
                     print_matrix(Hb);
@@ -374,7 +372,8 @@ matrix RANSAC(match *m, int n, float thresh, int k, int cutoff)
     //         remember it and how good it is
     //         if it's better than the cutoff:
     //             return it immediately
-    // if we get to the end return the best homography
+    // if we get to the end return the best_initial_inliers homography
+    print_matrix(Hb);
     return Hb;
 }
 
